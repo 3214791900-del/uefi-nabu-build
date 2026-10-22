@@ -2,10 +2,6 @@ APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 
-  # DarwinBoot must be dispatched here, otherwise
-  # LocateProtocol(gUniXNULoaderProtocolGuid) returns Not Found.
-  INF DarwinBootPkg/Driver/DarwinBoot.inf
-
   INF Binaries/nabu/QcomPkg/Drivers/EnvDxe/EnvDxe.inf
 
   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
@@ -99,4 +95,11 @@ APRIORI DXE {
   INF MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
   INF MdeModulePkg/Universal/Console/ConSplitterDxe/ConSplitterDxe.inf
   INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
+
+  # DarwinBoot must still be listed in APRIORI (otherwise
+  # LocateProtocol(gUniXNULoaderProtocolGuid) returns Not Found), but it has to
+  # run AFTER GraphicsConsoleDxe: its DEBUG/Print path asserts on
+  # gST->ConOut != NULL, and ConOut only exists once the console drivers above
+  # have been dispatched.
+  INF DarwinBootPkg/Driver/DarwinBoot.inf
 }
