@@ -1,0 +1,65 @@
+name: build-uefi-variants
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Setup toolchain
+        run: |
+          sudo apt-get update -qq
+          bash ./setup_env.sh -p apt
+
+      - name: Build variants
+        run: |
+          export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
+          chmod +x build_uefi.py build_active_devices.sh setup_env.sh || true
+
+          find Resources -name '*.patch' -exec sed -i 's/\r$//' {} \;
+          grep -h '^+++ b/' Resources/MuPatches/*.patch | sed 's|^+++ b/||' | sort -u | while read -r f; do
+            [ -f "Mu_Basecore/$f" ] && sed -i 's/\r$//' "Mu_Basecore/$f"
+          done
+
+          cp Resources/Configs/nabu.toml /tmp/nabu.toml.orig
+          cat Resources/Configs/nabu.toml
+
+          for comp in gzip none; do
+            for rd in 32 64; do
+              echo "===== variant: kernel_compression=$comp ramdisk=${rd}MiB ====="
+              cp /tmp/nabu.toml.orig Resources/Configs/nabu.toml
+              sed -i "s/^kernel_compression *=.*/kernel_compression = \"$comp\"/" Resources/Configs/nabu.toml
+              grep kernel_compression Resources/Configs/nabu.toml
+              head -c $(( rd * 1024 * 1024 )) /dev/zero > Resources/ramdisk
+              rm -f Mu-nabu.img
+              python3 ./build_uefi.py -d nabu -r DEBUG -c > "/tmp/build-$comp-$rd.log" 2>&1
+              rc=$?
+              echo "build rc=$rc"
+              if [ -f Mu-nabu.img ]; then
+                mv Mu-nabu.img "Mu-nabu-$comp-$rd.img"
+                ls -la "Mu-nabu-$comp-$rd.img"
+              else
+                tail -20 "/tmp/build-$comp-$rd.log" || true
+              fi
+            done
+          done
+
+          echo "=== final ==="
+          ls -la Mu-nabu-*.img || true
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uefi-variants
+          path: |
+            Mu-nabu-*.img
+            Build/nabuPkg/*/FV/SILICIUM_UEFI.fd
+          if-no-files-found: warn
