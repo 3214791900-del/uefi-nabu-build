@@ -97,6 +97,11 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
   INF RuleOverride = ACPITABLE nabu/AcpiTables.inf
 
+  # UniXNU boot manager + DarwinBoot kernel loader
+  INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  INF UniXNUPkg/Application/UniXNU/UniXNU.inf
+  INF DarwinBootPkg/Driver/DarwinBoot.inf
+
   # Device Tree
   #INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
   #FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {

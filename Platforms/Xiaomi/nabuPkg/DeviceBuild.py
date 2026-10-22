@@ -38,7 +38,9 @@ class CommonPlatform ():
         "Silicon/Silicium",
         "Silicium-ACPI",
         "Silicium-ACPI/Platforms/Xiaomi",
-        "Silicium-ACPI/Silicon/Qualcomm"
+        "Silicium-ACPI/Silicon/Qualcomm",
+        "UniXNU/package",
+        "DarwinBoot"
     )
 
 # ####################################################################################### #

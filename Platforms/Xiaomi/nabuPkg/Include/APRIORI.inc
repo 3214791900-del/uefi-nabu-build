@@ -2,6 +2,10 @@ APRIORI DXE {
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 
+  # DarwinBoot must be dispatched here, otherwise
+  # LocateProtocol(gUniXNULoaderProtocolGuid) returns Not Found.
+  INF DarwinBootPkg/Driver/DarwinBoot.inf
+
   INF Binaries/nabu/QcomPkg/Drivers/EnvDxe/EnvDxe.inf
 
   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
