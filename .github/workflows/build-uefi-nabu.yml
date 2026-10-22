@@ -30,8 +30,12 @@ jobs:
       - name: Build nabu UEFI
         run: |
           export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
-          # The tree was committed from Windows, so the exec bit is not tracked.
+          # Tree was committed from Windows: exec bits are not tracked and
+          # Resources/MuPatches/*.patch got stored with CRLF, which patch(1) rejects.
           chmod +x build_uefi.py build_active_devices.sh setup_env.sh || true
+          find Resources -name '*.patch' -exec sed -i 's/\r$//' {} \;
+          echo "--- patch CR check ---"
+          grep -rlc $'\r' Resources --include='*.patch' || echo "no CR left"
           python3 ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
           echo "=== build exit: $rc ==="
