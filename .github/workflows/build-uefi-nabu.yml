@@ -7,9 +7,6 @@ on:
         description: DEBUG / RELEASE
         default: DEBUG
 
-env:
-  CI_BUILD: true
-
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -21,31 +18,28 @@ jobs:
           fetch-depth: 1
 
       - name: Setup toolchain
-        run: bash ./setup_env.sh -p apt
+        run: |
+          sudo apt-get update -qq
+          bash ./setup_env.sh -p apt
 
       - name: Build nabu UEFI
         run: |
           export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
           chmod +x build_uefi.py build_active_devices.sh setup_env.sh || true
+
+          # Resources/MuPatches came from a Windows commit (CRLF) while the
+          # Mu_Basecore checkout is CRLF as well. git apply matches context
+          # byte-for-byte, so normalise BOTH sides to LF.
           find Resources -name '*.patch' -exec sed -i 's/\r$//' {} \;
-          grep -rlc $'\r' Resources --include='*.patch' || echo "no CR left"
+          grep -h '^+++ b/' Resources/MuPatches/*.patch | sed 's|^+++ b/||' | sort -u | while read -r f; do
+            if [ -f "Mu_Basecore/$f" ]; then
+              sed -i 's/\r$//' "Mu_Basecore/$f"
+              echo "normalized Mu_Basecore/$f"
+            fi
+          done
 
-          PATCH="$GITHUB_WORKSPACE/Resources/MuPatches/AsmMacroLib.patch"
-          TARGET="Mu_Basecore/MdePkg/Include/AArch64/AsmMacroLib.h"
-
-          echo "--- Mu_Basecore HEAD ---"
-          git -C Mu_Basecore rev-parse HEAD
-          echo "--- Mu_Basecore status ---"
-          git -C Mu_Basecore status --porcelain | head -20
-          echo "--- target exists? ---"
-          ls -la "$TARGET"
-          echo "--- target lines 35..45 with cat -A ---"
-          sed -n '35,45p' "$TARGET" | cat -A
-          echo "--- patch lines 1..17 with cat -A ---"
-          cat -A "$PATCH" | sed -n '1,17p'
-          echo "--- git apply --check (verbose) ---"
-          ( cd Mu_Basecore && git apply --check -v "$PATCH" 2>&1 | head -30 ) || true
-          echo "--- end diagnosis ---"
+          echo "--- patches still containing CR? ---"
+          grep -rlc $'\r' Resources --include='*.patch' || echo "none"
 
           python3 ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
