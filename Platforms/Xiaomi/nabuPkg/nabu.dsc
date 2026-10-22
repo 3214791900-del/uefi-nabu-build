@@ -80,6 +80,11 @@
   #
   ConfigurationMapLib|nabuPkg/Library/ConfigurationMapLib/ConfigurationMapLib.inf
 
+  #
+  # UniXNU Libraries
+  #
+  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
+
 [Components]
   #
   # ACPI Tables
