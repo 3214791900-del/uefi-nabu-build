@@ -30,7 +30,9 @@ jobs:
       - name: Build nabu UEFI
         run: |
           export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
-          ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
+          # The tree was committed from Windows, so the exec bit is not tracked.
+          chmod +x build_uefi.py build_active_devices.sh setup_env.sh || true
+          python3 ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
           echo "=== build exit: $rc ==="
           exit "$rc"
