@@ -6,6 +6,9 @@ on:
       mode:
         description: DEBUG / RELEASE
         default: DEBUG
+      ramdisk_mib:
+        description: ramdisk size in MiB (nabu needs 32-64)
+        default: "64"
 
 jobs:
   build:
@@ -27,9 +30,9 @@ jobs:
           export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
           chmod +x build_uefi.py build_active_devices.sh setup_env.sh || true
 
-          # Resources/MuPatches came from a Windows commit (CRLF) while the
-          # Mu_Basecore checkout is CRLF as well. git apply matches context
-          # byte-for-byte, so normalise BOTH sides to LF.
+          # Resources/MuPatches came from a Windows commit (CRLF) and the
+          # Mu_Basecore checkout is CRLF too; git apply matches byte-for-byte,
+          # so normalise both sides to LF.
           find Resources -name '*.patch' -exec sed -i 's/\r$//' {} \;
           grep -h '^+++ b/' Resources/MuPatches/*.patch | sed 's|^+++ b/||' | sort -u | while read -r f; do
             if [ -f "Mu_Basecore/$f" ]; then
@@ -38,8 +41,11 @@ jobs:
             fi
           done
 
-          echo "--- patches still containing CR? ---"
-          grep -rlc $'\r' Resources --include='*.patch' || echo "none"
+          # Resources/ramdisk ships as the 5-byte ASCII string "dummy".
+          # ABL rejects a too-small ramdisk (16 MiB -> Load Error); nabu is
+          # documented working at 32-64 MiB and black-screening at 96 MiB.
+          head -c $(( ${{ inputs.ramdisk_mib || 64 }} * 1024 * 1024 )) /dev/zero > Resources/ramdisk
+          ls -la Resources/ramdisk
 
           python3 ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
@@ -51,7 +57,7 @@ jobs:
         run: |
           ls -la Mu-* 2>/dev/null || true
           ls -la BootShim/BootShim.* 2>/dev/null || true
-          find Platforms -name 'SILICIUM_UEFI.fd*' -exec ls -la {} \; 2>/dev/null || true
+          find Build -name 'SILICIUM_UEFI.fd*' -exec ls -la {} \; 2>/dev/null || true
 
       - name: Upload
         if: always()
@@ -62,6 +68,6 @@ jobs:
             Mu-nabu*
             BootShim/BootShim.bin
             BootShim/BootShim.elf
-            Platforms/Xiaomi/nabuPkg/*_CLANGPDB/FV/SILICIUM_UEFI.fd*
+            Build/nabuPkg/*/FV/SILICIUM_UEFI.fd*
             build.log
           if-no-files-found: warn
