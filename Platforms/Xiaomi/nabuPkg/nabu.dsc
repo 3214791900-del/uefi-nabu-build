@@ -85,3 +85,10 @@
   # ACPI Tables
   #
   nabu/AcpiTables.inf
+
+  #
+  # UniXNU boot manager + DarwinBoot kernel loader
+  #
+  UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  UniXNUPkg/Application/UniXNU/UniXNU.inf
+  DarwinBootPkg/Driver/DarwinBoot.inf
