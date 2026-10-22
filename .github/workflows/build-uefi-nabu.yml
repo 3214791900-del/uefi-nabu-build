@@ -1,0 +1,56 @@
+name: build-uefi-nabu
+
+# Build the Mu-Silicium UEFI firmware for the Xiaomi Pad 5 only.
+# Upstream builds every "Active" device in Status.md; this targets nabu alone so
+# the run stays inside the job timeout.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: DEBUG / RELEASE
+        default: DEBUG
+
+env:
+  CI_BUILD: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Setup toolchain
+        run: bash ./setup_env.sh -p apt
+
+      - name: Build nabu UEFI
+        run: |
+          export CLANGPDB_AARCH64_PREFIX=aarch64-linux-gnu-
+          ./build_uefi.py -d nabu -r "${{ inputs.mode || 'DEBUG' }}" -c 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          echo "=== build exit: $rc ==="
+          exit "$rc"
+
+      - name: Collect
+        if: always()
+        run: |
+          ls -la Mu-* 2>/dev/null || true
+          ls -la BootShim/BootShim.* 2>/dev/null || true
+          find Platforms -name 'SILICIUM_UEFI.fd*' -exec ls -la {} \; 2>/dev/null || true
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uefi-nabu
+          path: |
+            Mu-nabu*
+            BootShim/BootShim.bin
+            BootShim/BootShim.elf
+            Platforms/Xiaomi/nabuPkg/*_CLANGPDB/FV/SILICIUM_UEFI.fd*
+            build.log
+          if-no-files-found: warn
